@@ -1,0 +1,74 @@
+name: Python Static & Dynamic Checks
+
+on:
+  pull_request:
+    paths:
+      - '**/*.py'
+      - '.github/workflows/python-checks.yaml'
+
+jobs:
+  lint-and-check:
+    name: Lint and Static Analysis
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pylint ruff black bandit pytype
+
+      - name: Run Pylint
+        id: pylint
+        run: pylint .
+        continue-on-error: true
+
+      - name: Run Ruff
+        id: ruff
+        run: ruff .
+        continue-on-error: true
+
+      - name: Run Black
+        id: black
+        run: black . --check
+        continue-on-error: true
+
+      - name: Apply Black formatting
+        if: steps.black.outcome == 'failure'
+        run: black .
+        continue-on-error: true
+
+      - name: Run Bandit
+        id: bandit
+        run: bandit -r .
+        continue-on-error: true
+
+      - name: Run Pytype
+        id: pytype
+        run: pytype .
+        continue-on-error: true
+
+      - name: Verify all checks passed
+        if: always()
+        run: |
+          failed=false
+          for step in pylint ruff black bandit pytype; do
+            outcome=${{ steps[step].outcome }}
+            if [[ "$outcome" == 'failure' ]]; then
+              echo "✗ $step failed"
+              failed=true
+            fi
+          done
+          if [ "$failed" = true ]; then
+            echo 'One or more checks failed.'
+            exit 1
+          else
+            echo 'All checks passed.'
+          fi
