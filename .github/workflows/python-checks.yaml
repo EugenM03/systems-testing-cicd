@@ -1,7 +1,10 @@
 name: Python Static & Dynamic Checks
 
 on:
+  push:
+    branches: [ main ]
   pull_request:
+    branches: [ main ]
     paths:
       - '**/*.py'
       - '.github/workflows/python-checks.yaml'
